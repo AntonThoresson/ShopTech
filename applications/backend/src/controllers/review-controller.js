@@ -81,16 +81,36 @@ export async function createReview(request, response) {
 
     try {
       const authorizationHeaderValue = request.get("Authorization");
+      if (!authorizationHeaderValue || !authorizationHeaderValue.startsWith("Bearer ")) {
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+        return;
+      }
       const accessToken = authorizationHeaderValue.substring(7);
       const isSigned = accessToken.split('.').length === 3;
 
-      if (isSigned) {
-        const decodedToken = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
-
-        if (!decodedToken.isLoggedIn) {
-          throw new jwt.JsonWebTokenError();
-        }
+      if (!isSigned) {
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+        return;
       }
+
+      const decodedToken = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
+
+      if (!decodedToken.isLoggedIn) {
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+        return;
+      }
+
+      if (decodedToken.accountID !== request.body.accountID) {
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+        return;
+      }
+
+      const user = await db.query(
+        "SELECT accountID, username FROM accounts WHERE email = ?",
+        [decodedToken.accountID]
+      );
+      username = user[0].username;
+      accountID = decodedToken.accountID;
 
       if(username === "" || username === null){
         username = request.body.userEmail
@@ -135,15 +155,28 @@ export async function updateReviewById(request, response) {
   } else {
     try {
       const authorizationHeaderValue = request.get("Authorization");
+      if (!authorizationHeaderValue || !authorizationHeaderValue.startsWith("Bearer ")) {
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+        return;
+      }
       const accessToken = authorizationHeaderValue.substring(7);
       const isSigned = accessToken.split('.').length === 3;
 
-      if (isSigned) {
-        const decodedToken = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
+      if (!isSigned) {
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+        return;
+      }
 
-        if (!decodedToken.isLoggedIn) {
-          throw new jwt.JsonWebTokenError();
-        }
+      const decodedToken = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
+
+      if (!decodedToken.isLoggedIn) {
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+        return;
+      }
+
+      if (decodedToken.accountID !== request.body.accountID) {
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+        return;
       }
 
       const values = [

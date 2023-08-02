@@ -14,7 +14,7 @@
         "Content-Type": "application/json",
         Authorization: "Bearer " + $user.accessToken,
       },
-      body: JSON.stringify({ userEmail, description, stars }),
+      body: JSON.stringify({ userEmail, description, stars, accountID: $user.accountID}),
     });
     if (response.status == 400 || response.status == 500) {
       errorMessages = await response.json();

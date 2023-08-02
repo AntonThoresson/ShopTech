@@ -1,7 +1,7 @@
 <script>
   import { navigate } from "svelte-routing";
   import { user } from "../user-store.js";
-    import APIBaseURL from "../config.js";
+  import APIBaseURL from "../config.js";
   export let id;
   let review = null;
   let updatedUsername = "";
@@ -22,6 +22,7 @@
         updatedUsername,
         updatedDescription,
         updatedStars,
+        accountID: $user.accountID,
       }),
     });
     if (
