@@ -54,22 +54,16 @@ export async function getUserByAdvertId(request, response) {
   }
 }
 
-/*
 export async function signIn(request, response) {
   const grantType = request.body.grant_type;
   const email = request.body.email;
   const username = request.body.username;
   const password = request.body.password;
   let existingPassword = "";
-  console.log("granttype:", grantType);
-  console.log("email:", email);
-  console.log("username:", username);
-  console.log("password:", password);
   let user;
 
   try {
     user = await db.query("SELECT * FROM accounts WHERE email = ?", username);
-    console.log("user test", user);
     existingPassword = user[0]?.password || "";
   } catch (error) {
     console.error(error);
@@ -81,108 +75,12 @@ export async function signIn(request, response) {
     response.status(400).json({ error: "unsupported_grant_type" });
     return;
   }
-
-  console.log("user[0].accountID", user[0].accountID);
-  console.log("password:", password);
-  console.log("existing password", existingPassword);
-  const isMatch = await bcrypt.compare(password, existingPassword);
-
-  if (grantType !== "password") {
-    response.status(400).json({ error: "unsupported_grant_type" });
-    return;
-  }
-
-  if (isMatch) {
-    let payload = null;
-
-    if (username === ADMIN_EMAIL) {
-      payload = {
-        isAdmin: true,
-        isLoggedIn: true,
-        userId: user[0].accountID,
-      };
-    } else {
-      payload = {
-        isAdmin: false,
-        isLoggedIn: true,
-        userId: user[0].accountID,
-      };
-    }
-
-    const idToken = jwt.sign({ userId: user[0].accountID }, ID_TOKEN_SECRET, {
-      expiresIn: '1h',
-    });
-
-    jwt.sign(payload, ACCESS_TOKEN_SECRET, function (error, accessToken) {
-      if (error) {
-        response.status(500).end();
-      } else {
-        if (payload.isAdmin) {
-          response.status(200).json({
-            access_token: accessToken,
-            id_token: idToken,
-            type: 'bearer',
-            username: username,
-            isAdmin: true,
-          });
-        } else {
-          response.status(200).json({
-            access_token: accessToken,
-            id_token: idToken,
-            type: 'bearer',
-            username: username,
-            isAdmin: false,
-          });
-        }
-      }
-    });
-  } else {
-    response
-      .status(400)
-      .json({
-        error: "invalid_grant",
-        authError: "Sign in failed. Invalid credentials.",
-      });
-    console.log("Login failed");
-  }
-}*/
-export async function signIn(request, response) {
-  const grantType = request.body.grant_type;
-  const email = request.body.email;
-  const username = request.body.username;
-  const password = request.body.password;
-  let existingPassword = "";
-  console.log("granttype:", grantType);
-  console.log("email:", email);
-  console.log("username:", username);
-  console.log("password:", password);
-  let user;
-
-  try {
-    user = await db.query("SELECT * FROM accounts WHERE email = ?", username);
-    console.log("user test", user);
-    existingPassword = user[0]?.password || "";
-  } catch (error) {
-    console.error(error);
-    response.status(500).send(DATABASE_ERROR_MESSAGE);
-    return;
-  }
-
-  if (grantType !== "password") {
-    response.status(400).json({ error: "unsupported_grant_type" });
-    return;
-  }
-
-  console.log("user[0].accountID", user[0].accountID);
-  console.log("password:", password);
-  console.log("existing password", existingPassword);
   const isMatch = await bcrypt.compare(password, existingPassword);
 
   if (!isMatch) {
     response
       .status(400)
       .json({ error: "invalid_grant", authError: "Sign in failed. Invalid credentials." });
-    console.log("Login failed");
     return;
   }
 
@@ -259,7 +157,6 @@ export async function signUp(request, response) {
     console.error(error.status);
     response.status(500).send(DATABASE_ERROR_MESSAGE);
   }
-  console.log(emailTaken)
   if (!(emailTaken === null || emailTaken == "")) {
     errorMessages.push("Email address already in use")
   }
@@ -303,7 +200,6 @@ export async function signUp(request, response) {
 
   if (0 < errorMessages.length) {
     response.status(400).json(errorMessages);
-    console.log("Statuscode: 400, [errors]");
     return;
   }
 
@@ -356,8 +252,6 @@ export async function registerGoogleAuthUser(request, response) {
 }
 
 export async function updateAccountByEmail(request, response) {
-  console.log("UPDATE ACCOUNT")
-
   const accountData = request.body;
   if (!request.body) {
     response.status(400).send("Missing request body");
@@ -386,7 +280,7 @@ export async function updateAccountByEmail(request, response) {
     }
 
     const values = [accountData.firstName, accountData.lastName, accountData.address, accountData.phoneNumber, request.params.id];
-    const updatedAccount = await db.query("UPDATE accounts SET firstName = ?, lastName = ?, address = ?, phoneNumber = ? WHERE email = ?", values);
+    await db.query("UPDATE accounts SET firstName = ?, lastName = ?, address = ?, phoneNumber = ? WHERE email = ?", values);
     response.status(200).send("Account updated successfully").json();
   } catch (error) {
     response.status(500).json([DATABASE_ERROR_MESSAGE]);
@@ -394,7 +288,6 @@ export async function updateAccountByEmail(request, response) {
 }
 
 export async function deleteAccountByEmail(request, response) {
-  console.log("DELETE ACCOUNT")
   try {
     const authorizationHeaderValue = request.get("Authorization");
     const accessToken = authorizationHeaderValue.substring(7);

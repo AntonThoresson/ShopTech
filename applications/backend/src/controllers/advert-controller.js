@@ -49,7 +49,6 @@ export async function getAdverts(request, response) {
 export async function getAdvertById(request, response) {
   try {
     const advert = await db.query("SELECT * FROM adverts WHERE advertID = ?", [request.params.id]);
-    console.log("getAdvertById: advertID:", advert[0].advertID)
     response.status(200).json(advert[0]);
   } catch (error) {
     console.error(error.status);
@@ -60,7 +59,9 @@ export async function getAdvertById(request, response) {
 export async function createAdvert(request, response) {
   const errorMessages = [];
   const advertData = request.body;
-
+  const userData = request.body.userData;
+  let username = "";
+  let accountID = "";
   const date = new Date();
   const timeNow = date.toISOString().split("T")[0];
 
@@ -103,41 +104,66 @@ export async function createAdvert(request, response) {
   if (0 < errorMessages.length) {
     response.status(400).json(errorMessages);
     return;
-  }
+  } else {
 
-  const userData = request.body.userData;
-  let accountID = "";
+    try {
+      const user = await db.query("SELECT accountID, username FROM accounts WHERE email = ?", [userData.email]);
+      username = user[0].username;
+      accountID = user[0].accountID;
+    } catch (error) {
+      console.error(error.status);
+      response.status(500).send(DATABASE_ERROR_MESSAGE);
+    }
 
-  try {
-    const user = await db.query("SELECT * FROM accounts WHERE email = ?", [userData.email]);
-    accountID = user[0].accountID;
-  } catch (error) {
-    console.error(error.status);
-    response.status(500).send(DATABASE_ERROR_MESSAGE);
-  }
+    try {
+      const authorizationHeaderValue = request.get("Authorization");
+      if (!authorizationHeaderValue || !authorizationHeaderValue.startsWith("Bearer ")) {
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+        return;
+      }
+      const accessToken = authorizationHeaderValue.substring(7);
+      const isSigned = accessToken.split('.').length === 3;
 
-  try {
-    const authorizationHeaderValue = request.get("Authorization");
-    const accessToken = authorizationHeaderValue.substring(7);
-    const isSigned = accessToken.split('.').length === 3;
+      if (!isSigned) {
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+        return;
+      }
 
-    if (isSigned) {
       const decodedToken = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
 
       if (!decodedToken.isLoggedIn) {
-        throw new jwt.JsonWebTokenError();
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+        return;
       }
-    }
 
-    const values = [advertData.category, advertData.title, advertData.price, advertData.description, advertData.img_src, timeNow, accountID];
-    const newAdvert = await db.query("INSERT INTO adverts (category, title, price, description, img_src, createdAt, accountID) VALUES (?,?,?,?,?,?,?)", values);
-    response.status(201).send("Advert created successfully").json();
-  } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      response.status(401).json([UNAUTHORIZED_USER_ERROR]);
-    } else {
-      console.error(error.status);
-      response.status(500).json([DATABASE_ERROR_MESSAGE]);
+      if (decodedToken.accountID !== request.body.accountID) {
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+        return;
+      }
+
+      const user = await db.query(
+        "SELECT accountID, username FROM accounts WHERE accountID = ?",
+        [decodedToken.userId]
+      );
+      username = user[0].username;
+      accountID = decodedToken.userId;
+
+      if (username === "" || username === null) {
+        username = request.body.userEmail
+      }
+
+      const values = [advertData.category, advertData.title, advertData.price, advertData.description, advertData.img_src, timeNow, accountID];
+
+      await db.query("INSERT INTO adverts (category, title, price, description, img_src, createdAt, accountID) VALUES (?,?,?,?,?,?,?)", values);
+
+      response.status(201).send("Advert created successfully").json();
+    } catch (error) {
+      if (error instanceof jwt.JsonWebTokenError) {
+        response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+      } else {
+        console.error(error.status);
+        response.status(500).json([DATABASE_ERROR_MESSAGE]);
+      }
     }
   }
 }
@@ -176,6 +202,8 @@ export async function insertImageIntoAdvertById(request, response) {
 }
 
 export async function updateAdvertById(request, response) {
+  let accountID = "";
+  let username = "";
   const advertData = request.body;
   if (!request.body) {
     response.status(400).send("Missing request body");
@@ -184,17 +212,48 @@ export async function updateAdvertById(request, response) {
 
   try {
     const authorizationHeaderValue = request.get("Authorization");
+    if (!authorizationHeaderValue || !authorizationHeaderValue.startsWith("Bearer ")) {
+      response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+      return;
+    }
     const accessToken = authorizationHeaderValue.substring(7);
+    const isSigned = accessToken.split('.').length === 3;
+
+    if (!isSigned) {
+      response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+      return;
+    }
+
     const decodedToken = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
 
     if (!decodedToken.isLoggedIn) {
-      throw new jwt.JsonWebTokenError();
+      response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+      return;
     }
 
-    console.log("decodedToken.userId", decodedToken.userId)
-    console.log("advertData.accountID", advertData.accountID)
     if (decodedToken.userId !== advertData.accountID) {
-      response.status(401).send("Unauthorized");
+      response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+      return;
+    }
+
+    const user = await db.query(
+      "SELECT accountID, username FROM accounts WHERE accountID = ?",
+      [decodedToken.userId]
+    );
+    username = user[0].username;
+    accountID = decodedToken.userId;
+
+    if (username === "" || username === null) {
+      username = request.body.userEmail
+    }
+
+    const existingAdvert = await db.query(
+      "SELECT accountID FROM adverts WHERE advertID = ?",
+      [request.params.id]
+    );
+
+    if (existingAdvert[0].accountID !== accountID) {
+      response.status(403).json(["You are not authorized to update this advert"]);
       return;
     }
 
@@ -212,7 +271,6 @@ export async function updateAdvertById(request, response) {
 }
 
 export async function deleteAdvertById(request, response) {
-  console.log("deleteAdvertById")
   try {
     const authorizationHeaderValue = request.get("Authorization");
     const accessToken = authorizationHeaderValue.substring(7);

@@ -25,10 +25,7 @@
 
   async function loadUserData() {
     try {
-      const response = await fetch(
-        APIBaseURL + "accounts/" + $user.userEmail
-      );
-      console.log("user email from account: ", $user.userEmail);
+      const response = await fetch(APIBaseURL + "accounts/" + $user.userEmail);
 
       switch (response.status) {
         case 200:
@@ -46,8 +43,6 @@
   loadUserData();
 
   async function handleFileUpload(event) {
-    console.log("HANDLEFILEINPUT");
-
     const fileInput = event.target.querySelector('input[type="file"]');
     const file = fileInput.files[0];
     const data = new FormData();
@@ -105,7 +100,7 @@
   }
 
   async function getData() {
-    const values = await Promise.all([createAdvert(), handleFileUpload(event)]);
+    await Promise.all([createAdvert(), handleFileUpload(event)]);
   }
 </script>
 
