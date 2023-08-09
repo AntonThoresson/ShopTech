@@ -46,6 +46,7 @@
       firstName,
       lastName,
       phoneNumber,
+      userData
     };
 
     try {

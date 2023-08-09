@@ -112,7 +112,6 @@ export async function signIn(request, response) {
   });
 }
 
-
 function validateEmail(email) {
   var re = /\S+@\S+\.\S+/;
   return re.test(email);
@@ -253,30 +252,48 @@ export async function registerGoogleAuthUser(request, response) {
 
 export async function updateAccountByEmail(request, response) {
   const accountData = request.body;
+  let username = "";
+  let accountID = "";
+
   if (!request.body) {
     response.status(400).send("Missing request body");
     return;
   }
   try {
     const authorizationHeaderValue = request.get("Authorization");
+    if (!authorizationHeaderValue || !authorizationHeaderValue.startsWith("Bearer ")) {
+      response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+      return;
+    }
     const accessToken = authorizationHeaderValue.substring(7);
     const isSigned = accessToken.split('.').length === 3;
 
-    const user = await db.query("SELECT * FROM accounts WHERE email = ?", [
-      request.params.id,
-    ]);
-
-    if (isSigned) {
-      const decodedToken = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
-
-      console.log("isSigned", isSigned)
-      if (!decodedToken.isLoggedIn || decodedToken.userId !== user[0].accountID) {
-        response.status(401).send("Unauthorized");
-        return;
-      }
-    } else {
-      response.status(401).send("Unauthorized");
+    if (!isSigned) {
+      response.status(401).json([UNAUTHORIZED_USER_ERROR]);
       return;
+    }
+
+    const decodedToken = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
+
+    if (!decodedToken.isLoggedIn) {
+      response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+      return;
+    }
+
+    if (decodedToken.userId !== accountData.userData.accountID) {
+      response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+      return;
+    }
+
+    const user = await db.query(
+      "SELECT accountID, username FROM accounts WHERE accountID = ?",
+      [decodedToken.userId]
+    );
+    username = user[0].username;
+    accountID = decodedToken.userId;
+
+    if (username === "" || username === null) {
+      username = accountData.userData.email;
     }
 
     const values = [accountData.firstName, accountData.lastName, accountData.address, accountData.phoneNumber, request.params.id];
