@@ -53,6 +53,9 @@
         APIBaseURL + "adverts/upload/" + $user.userEmail,
         {
           method: "PATCH",
+          headers: {
+          Authorization: "Bearer " + $user.accessToken,
+        },
           body: data,
         }
       );

@@ -118,7 +118,7 @@
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer " + $user.accessToken
+            Authorization: "Bearer " + $user.accessToken
           },
         }
       );

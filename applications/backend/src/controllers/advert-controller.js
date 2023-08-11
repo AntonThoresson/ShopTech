@@ -170,13 +170,16 @@ export async function createAdvert(request, response) {
 
 export async function insertImageIntoAdvertById(request, response) {
   let accountID = "";
+  let advertID = "";
+  let username = "";
+
   try {
-    const user = await db.query("SELECT * FROM accounts WHERE email = ?", [request.params.id]);
+    const user = await db.query("SELECT accountID, username FROM accounts WHERE email = ?", [request.params.id]);
     accountID = user[0].accountID;
   } catch (error) {
     console.error(error.status);
   }
-  let advertID = "";
+
   try {
     const id = accountID;
     const adverts = await db.query(
@@ -189,9 +192,40 @@ export async function insertImageIntoAdvertById(request, response) {
     response.status(500).send(DATABASE_ERROR_MESSAGE);
   }
 
-  const image = request.file.buffer.toString('base64')
-  const updateID = advertID;
   try {
+    const authorizationHeaderValue = request.get("Authorization");
+    if (!authorizationHeaderValue || !authorizationHeaderValue.startsWith("Bearer ")) {
+      response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+      return;
+    }
+    const accessToken = authorizationHeaderValue.substring(7);
+    const isSigned = accessToken.split('.').length === 3;
+
+    if (!isSigned) {
+      response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+      return;
+    }
+
+    const decodedToken = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
+
+    if (!decodedToken.isLoggedIn) {
+      response.status(401).json([UNAUTHORIZED_USER_ERROR]);
+      return;
+    }
+
+    const user = await db.query(
+      "SELECT accountID, username FROM accounts WHERE accountID = ?",
+      [decodedToken.userId]
+    );
+    username = user[0].username;
+    accountID = decodedToken.userId;
+
+    if (username === "" || username === null) {
+      username = request.params.id;
+    }
+
+    const image = request.file.buffer.toString('base64')
+    const updateID = advertID;
     const values = [image, updateID];
     await db.query("UPDATE adverts SET img_src = ? WHERE advertID = ?", values);
     response.status(200).send("Image insterted into advert successfully").json();
@@ -281,7 +315,7 @@ export async function deleteAdvertById(request, response) {
     }
 
     await db.query("DELETE FROM adverts WHERE advertID = ? AND accountID = ?", [request.params.id, decodedToken.userId])
-    response.status(204).send("Advert successfully deleted");
+    response.status(200).send("Advert successfully deleted");
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       response.status(401).json([UNAUTHORIZED_USER_ERROR]);
