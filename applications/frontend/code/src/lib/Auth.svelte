@@ -26,16 +26,13 @@
     };
 
     try {
-      const response = await fetch(
-        APIBaseURL + "accounts/signup",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(account),
-        }
-      );
+      const response = await fetch(APIBaseURL + "accounts/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(account),
+      });
 
       switch (response.status) {
         case 201:
@@ -97,8 +94,8 @@
         break;
 
       case 400:
-        errorCodes.push("Invalid credentials.")
-        errorCodes = errorCodes
+        errorCodes.push("Invalid credentials.");
+        errorCodes = errorCodes;
         break;
 
       default:
@@ -117,8 +114,8 @@
     showSignIn = true;
   }
 
-  function onSignInSubmitted(){
-    errorCodes = []
+  function onSignInSubmitted() {
+    errorCodes = [];
   }
 
   function signInWithGoogle() {
@@ -152,7 +149,7 @@
   }
 </script>
 
-<div class="container ">
+<div class="container">
   <div class="row">
     {#if accountWasCreated}
       <div>

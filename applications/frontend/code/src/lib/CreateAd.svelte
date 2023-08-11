@@ -32,6 +32,14 @@
           userData = await response.json();
           isFetchingUserData = false;
           break;
+
+        case 500:
+          errorCodes.push("Internal server error");
+          errorCodes = errorCodes;
+          break;
+
+        default:
+          errorCodes.push("Unexpected response");
       }
     } catch (error) {
       console.log("error:", error);
@@ -54,12 +62,25 @@
         {
           method: "PATCH",
           headers: {
-          Authorization: "Bearer " + $user.accessToken,
-        },
+            Authorization: "Bearer " + $user.accessToken,
+          },
           body: data,
         }
       );
-      console.log(response);
+      switch (response.status) {
+        case 200:
+          userData = await response.json();
+          isFetchingUserData = false;
+          break;
+
+        case 500:
+          errorCodes.push("Internal server error");
+          errorCodes = errorCodes;
+          break;
+
+        default:
+          errorCodes.push("Unexpected response");
+      }
     } catch (error) {
       console.error(error);
     }
@@ -95,10 +116,12 @@
         case 400:
           errorCodes = await response.json();
           break;
+
+        default:
+          errorCodes.push("Unexpected response");
       }
     } catch (error) {
-      errorCodes.push("COMMUNICATION_ERROR");
-      errorCodes = errorCodes;
+      console.error(error);
     }
   }
 
@@ -205,7 +228,6 @@
         </Row>
       </Container>
     </div>
-
     {#if 0 < errorCodes.length}
       <p>the following errors occured:</p>
 

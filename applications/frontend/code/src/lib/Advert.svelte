@@ -17,6 +17,8 @@
   let advert = null;
   let showForm = false;
   let emailSent = false;
+  let errorCodes = [];
+  let advertOwnerEmail = "";
 
   async function loadAdvert() {
     try {
@@ -27,16 +29,23 @@
           advert = await response.json();
           isfetchingAdvert = false;
           break;
+
+        case 500:
+          errorCodes.push("Internal server error")
+          errorCodes = errorCodes
+          break;
+
+        default:
+          errorCodes.push("Unexpected response");
       }
     } catch (error) {
       isfetchingAdvert = false;
       failedTofetchAdvert = true;
+      console.log("error:", error);
     }
   }
 
   loadAdvert();
-
-  let advertOwnerEmail = "";
 
   async function loadAdvertCreatorEmail() {
     try {
@@ -50,6 +59,14 @@
           advertOwnerEmail = account.email;
           console.log(advertOwnerEmail);
           break;
+
+        case 500:
+          errorCodes.push("Internal server error")
+          errorCodes = errorCodes
+          break;
+
+        default:
+          errorCodes.push("Unexpected response");
       }
     } catch (error) {
       console.log(error);

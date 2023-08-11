@@ -1,5 +1,5 @@
 <script>
-// @ts-nocheck
+  // @ts-nocheck
   import { Link, navigate, Route } from "svelte-routing";
   import { Button, Alert } from "sveltestrap";
   import { user } from "../user-store.js";
@@ -12,12 +12,11 @@
   let userData = null;
   let showDeleteConfirmation = false;
   let adverts = [];
+  let errorCodes = [];
 
   async function loadUserData() {
     try {
-      const response = await fetch(
-        APIBaseURL + "accounts/" + $user.userEmail
-      );
+      const response = await fetch(APIBaseURL + "accounts/" + $user.userEmail);
       console.log("user email from account: ", $user.userEmail);
 
       switch (response.status) {
@@ -25,6 +24,14 @@
           userData = await response.json();
           isFetchingUserData = false;
           break;
+
+        case 500:
+          errorCodes.push("Internal server error");
+          errorCodes = errorCodes;
+          break;
+
+        default:
+          errorCodes.push("Unexpected response");
       }
     } catch (error) {
       console.log("error:", error);
@@ -46,6 +53,14 @@
           adverts = await response.json();
           console.log(adverts[0]);
           break;
+
+        case 500:
+          errorCodes.push("Internal server error");
+          errorCodes = errorCodes;
+          break;
+
+        default:
+          errorCodes.push("Unexpected response");
       }
     } catch (error) {
       console.log("error:", error);
@@ -56,16 +71,13 @@
 
   async function deleteAccount() {
     try {
-      const response = await fetch(
-        APIBaseURL + "accounts/" + $user.userEmail,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + $user.accessToken,
-          },
-        }
-      );
+      const response = await fetch(APIBaseURL + "accounts/" + $user.userEmail, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + $user.accessToken,
+        },
+      });
 
       switch (response.status) {
         case 200:
@@ -73,6 +85,14 @@
             replace: false,
           });
           break;
+
+        case 500:
+          errorCodes.push("Internal server error");
+          errorCodes = errorCodes;
+          break;
+
+        default:
+          errorCodes.push("Unexpected response");
       }
     } catch (error) {
       console.log("error:", error);
@@ -215,6 +235,15 @@
         </div>
       </div>
     </div>
+    {#if 0 < errorCodes.length}
+      <p>the following errors occured:</p>
+
+      <ul>
+        {#each errorCodes as errorCode}
+          <li>{errorCode}</li>
+        {/each}
+      </ul>
+    {/if}
   {:else}
     <p>No advert with the given id {$user.userEmail}.</p>
   {/if}

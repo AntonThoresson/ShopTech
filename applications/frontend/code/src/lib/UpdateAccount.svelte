@@ -13,12 +13,11 @@
   let lastName = "";
   let phoneNumber = "";
   let adverts = [];
+  let errorCodes = [];
 
   async function loadUserData() {
     try {
-      const response = await fetch(
-        APIBaseURL + "accounts/" + $user.userEmail
-      );
+      const response = await fetch(APIBaseURL + "accounts/" + $user.userEmail);
       console.log("user email from account: ", $user.userEmail);
 
       switch (response.status) {
@@ -30,6 +29,14 @@
           lastName = userData.lastName;
           phoneNumber = userData.phoneNumber;
           break;
+
+        case 500:
+          errorCodes.push("Internal server error");
+          errorCodes = errorCodes;
+          break;
+
+        default:
+          errorCodes.push("Unexpected response");
       }
     } catch (error) {
       console.log("error:", error);
@@ -46,21 +53,18 @@
       firstName,
       lastName,
       phoneNumber,
-      userData
+      userData,
     };
 
     try {
-      const response = await fetch(
-        APIBaseURL + "accounts/" + $user.userEmail,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + $user.accessToken,
-          },
-          body: JSON.stringify(account),
-        }
-      );
+      const response = await fetch(APIBaseURL + "accounts/" + $user.userEmail, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + $user.accessToken,
+        },
+        body: JSON.stringify(account),
+      });
 
       switch (response.status) {
         case 200:
@@ -203,6 +207,15 @@
       </div>
     </div>
   {:else}
+    {#if 0 < errorCodes.length}
+      <p>the following errors occured:</p>
+
+      <ul>
+        {#each errorCodes as errorCode}
+          <li>{errorCode}</li>
+        {/each}
+      </ul>
+    {/if}
     <p>No advert with the given id {$user.userEmail}.</p>
   {/if}
 {:else}
