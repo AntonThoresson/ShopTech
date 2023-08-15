@@ -56,7 +56,6 @@ export async function getUserByAdvertId(request, response) {
 
 export async function signIn(request, response) {
   const grantType = request.body.grant_type;
-  const email = request.body.email;
   const username = request.body.username;
   const password = request.body.password;
   let existingPassword = "";
@@ -213,7 +212,7 @@ export async function signUp(request, response) {
       accountData.phoneNumber,
       createdAt,
     ];
-    const newAccount = await db.query(
+    await db.query(
       "INSERT INTO accounts (email, username, password, address, firstName, lastName, phoneNumber, createdAt) VALUES (?,?,?,?,?,?,?,?)",
       values
     );
@@ -226,7 +225,6 @@ export async function signUp(request, response) {
 }
 
 export async function registerGoogleAuthUser(request, response) {
-  console.log("registerGoogleAuthUser");
   const accountData = request.body;
   const date = new Date();
   const createdAt = date.toISOString().split("T")[0];
@@ -253,7 +251,6 @@ export async function registerGoogleAuthUser(request, response) {
 export async function updateAccountByEmail(request, response) {
   const accountData = request.body;
   let username = "";
-  let accountID = "";
 
   if (!request.body) {
     response.status(400).send("Missing request body");
